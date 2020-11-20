@@ -1,5 +1,15 @@
 ;#notrayIcon
 
+ifnotexist, StartupSaver.ini
+  { openConfig:=CMsgBox("","File Not Found - StartupSaver.ini", "Cannot find INI file. Open Configuration?","!","Yes|No","")
+   ifequal, openConfig, Yes
+    Run, StartupSaver94.ahk
+   ExitApp
+  }  
+Sysget, resw, 16
+Sysget, resh, 17
+Coordmode, ToolTip, Screen
+  
 ;Read from INI
 Counter=0
 IniRead, stall, StartupSaver.ini, Other, stallTime
@@ -13,13 +23,14 @@ bar :=% Round(100 / stall)
 Loop
  {
  IniRead, prog%Counter%, StartupSaver.ini, Programs, program%Counter%
- if prog%Counter%
- { IniRead, rawtime%Counter%, StartupSaver.ini, Times, time%Counter%
+ ifEqual, prog%Counter%, ERROR
+  { prog%Counter%=
+    break
+  }
+ IniRead, rawtime%Counter%, StartupSaver.ini, Times, time%Counter%
  time%Counter%:=% rawtime%Counter% * 1000
+ Iniread, arguments%Counter%, StartupSaver.ini, Args, arg%Counter%
  Counter++ 
- }
- Else
-  break
 }
 numofprogs:=Counter
 
@@ -38,7 +49,6 @@ Loop, %stall%
 { sleep, 1000
   if showProgress, 1
   { GuiControl,, Progress, + %bar%
-  dotdotdot :=  dotdotdot . "."
   countdown--
   phrase:="Starting in " . countdown
   GuiControl,, StartingUp, %phrase%
@@ -50,8 +60,11 @@ Gui, destroy
 Counter=0
 Loop, %numofprogs%
 { ifexist % prog%Counter%
-  { sleep, % time%Counter%  
-    run, % prog%Counter%
+  { SplitPath, prog%Counter%, name
+   tooltip
+   tooltip, Launching %name%, %resw%, %resh%
+   sleep, % time%Counter%  
+    run, % prog%Counter% arg%Counter%
   }
    Else
    { CMsgBox("","File Not Found - StartupSaver", "The file:`n" prog%Counter% "`ndoes not seem to exist.","!","Okay", noise " +Timeout=5")

@@ -1,100 +1,19 @@
 ;#NoTrayIcon
-;----------------------StartupSaver RUN-----------------------
-;Read from INI
-
-Starting: 
-Coordmode, ToolTip, Screen
-ifequal, 1, -start
-{ ifnotexist, StartupSaver.ini    
-  { openConfig:=CMsgBox("","File Not Found - StartupSaver.ini", "Cannot find INI file. Open Configuration?","!","Yes|No","")
-   ifequal, openConfig, Yes
-    { Goto, Configuration
-   } Else
-    { ExitApp
-    }
-  }  
-Counter=0           
-IniRead, stall, StartupSaver.ini, Other, stallTime
-IniREad, showProgress, StartupSaver.ini, Other, showProgress
-IniRead, noise, StartupSaver.ini, Other, sound
-IfEqual noise, 0
- noise=-Sound
-IfEqual noise, 1
- noise=+Sound
-bar :=% Round(100 / stall)
-Loop
- {
- IniRead, prog%Counter%, StartupSaver.ini, Programs, program%Counter%
- if prog%Counter%
- { IniRead, rawtime%Counter%, StartupSaver.ini, Times, time%Counter%
- time%Counter%:=% rawtime%Counter% * 1000
- Counter++ 
- }
- Else
-  break
-}
-numofprogs:=Counter
-
-;GUI
-if showprogress, 1
-{ countdown:=stall
-Gui 6:-Sysmenu +Owner
-Gui 6:Add, Text, vStartingUp x5, % "Starting in " . countdown
-Gui 6:Add, Progress, w100 h20 Range1-100 vProgress -Smooth
-Gui 6:Add, Button, w60 x30 default, Cancel
-Gui 6:Show, Autosize, StartupSaver
-}
-
-;Stalling
-Loop, %stall%
-{ sleep, 1000
-  if showProgress, 1
-  { GuiControl 6:, Progress, + %bar%
-  dotdotdot :=  dotdotdot . "."
-  countdown--
-  phrase:="Starting in " . countdown
-  GuiControl 6:, StartingUp, %phrase%
- }
-}
-Gui 6: destroy
-
-;Running
-Counter=0
-Loop, %numofprogs%
-{ ifexist % prog%Counter%
-  { SplitPath, prog%Counter%, name
-   tooltip
-   tooltip, Launching %name%, 1024, 560
-   sleep, % time%Counter%      
-   run, % prog%Counter%
-  }
-   Else
-   { CMsgBox("","File Not Found - StartupSaver", "The file:`n" prog%Counter% "`ndoes not seem to exist.","!","Okay", noise " +Timeout=5")
-   }
- Counter++
-}
-6GuiClose:
-6ButtonCancel:
-ifequal, pathw, 350
- { ExitApp                                             ;FIX!!!    
- return
- }
-else
- ExitApp
-}
-
-
- ;--------------------------------------END-----------------------------------
 ;Reading from INI
 Configuration:
 Counter=0
 ifexist, StartupSaver.ini
 {
- Loop, 10
+ Loop,
   {
   IniRead, prog%Counter%, StartupSaver.ini, Programs, program%Counter%
+  ifEqual, prog%Counter%, ERROR
+   { prog%Counter%=
+   break
+  }
   IniRead, rawtime%Counter%, StartupSaver.ini, Times, time%Counter%
   time%Counter%:=% rawtime%Counter% * 1000
+  IniRead, argument%Counter%,StartupSaver.ini, Args, arg%Counter%
   Counter++ 
  }
  IniRead, startupFolder, StartupSaver.ini, Other, startwithpc
@@ -105,37 +24,37 @@ ifexist, StartupSaver.ini
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~GUIs~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;MainGui
+Gui 1:Add, ListView, r10 w450 gMyListView -multi grid nosort, Path|Delay|Args
+Gui 1:Add, Button, y173 x10 h20 w45,New
+Gui 1:Add, Button, y173 x60 h20,Delete
+Gui 1:Add, Button, y173 x125 h20 w20 gupandup,/\
+Gui 1:Add, Button, y173 x150 h20 w20 gdownanddown,\/
+Gui 1:Add, Button, y173 x275 w60 default, OK
+Gui 1:Add, Button,y173 x345 w60, Cancel
+
+Gui 6:Add,groupbox,x5 y1 h110 w365,Add/Edit
+Gui 6:Add,text,x13 y20,Path:
+Gui 6:Add,Edit,x13 y35 w325 vpPath,
+Gui 6:Add,Button,x343 y34 gpathSelect, �
+Gui 6:Add,text,x13 y65, Delay:
+Gui 6:Add, Edit,w40 x13 y80 w40
+Gui 6:Add, UpDown, vtime Range0-60,
+Gui 6:Add,text,x70 y65,Arguments:
+Gui 6:Add,Edit,x70 y80 w290 varguments,
+Gui 6:Add, Button, y120 x230 w60 default, OK
+Gui 6:Add, Button,y120 x300 w60, Cancel
+
 Counter=0
-pathW=350
-pathX=10
-pathY=25
-buttW=18
-buttX=370
-buttY=24
-updownW=40
-updownX=400
-updownY=24
-;Gui, Add, Text,,Please enter the path to the programs and desired delay:
-Gui 1:Add, Text,y5 x10,Please enter the path to the programs and desired delay:    ;default is around y5 x10
-Loop, 10
-{ Gui 1:Add, Edit, w%pathW% x%pathX% y%pathY% vnewprog%Counter% ,% prog%Counter%
-Gui 1:Add, Button, w%buttW% x%buttX% y%buttY% gBtnSet%Counter%, �
-Gui 1:Add, Edit,w%updownW% x%updownX% y%updownY% w40
-Gui 1:Add, UpDown, vnewtime%Counter% Range0-60, % rawtime%Counter%
-pathY+=35
-buttY+=35
-updownY+=35
-Counter++
+loop,
+ { if prog%Counter%=
+    break
+  LV_Add("",prog%Counter%, rawtime%Counter%, argument%Counter%)  
+  Counter++
 }
-okcancelY:=pathY -5
-madebyY:=okcancelY - 3
-gboxY:=madebyY - 9
-Gui 1:Add, Button, w60 x305 y%okcancelY% Default, OK
-Gui 1:Add, Button, w60 x380 y%okcancelY% Default, Cancel
-Gui 1:Add, Text, y%madebyY% x15, Made by Jon Petraglia �2009. Use and enjoy. (^_^)`nwww.freewarewire.blogspot.com
-Gui 1:Add, GroupBox,y-6 x-20 w500 h7,,
-Gui 1:Add, GroupBox, y%gboxY% x%pathX% w257 h40
-  ;Menu
+LV_ModifyCol(1,340)
+LV_ModifyCol(2,40)
+LV_ModifyCol(3,100)
+
 Menu, FileMenu, Add, &Run, FileRun
 Menu, FileMenu, Add, Import/Export, FileIE
 Menu, FileMenu, Add, E&xit, FileExit
@@ -147,6 +66,7 @@ Menu, MenuBar, Add, &File, :FileMenu
 Menu, Menubar, Add, &Options, :OptionsMenu
 Menu, MenuBar, Add, &Help, :HelpMenu
 Gui 1:menu, Menubar
+Gui 1:Add, GroupBox, x0 y-10 h12 w470
 
 ;Gui 2: Config
 Gui 2:+owner1 -MaximizeBox -MinimizeBox
@@ -186,37 +106,60 @@ loop, HKEY_LOCAL_MACHINE, Software\Microsoft\Windows\CurrentVersion\Run, 0,
 }
 runReg:=Counter
 Counter=0
-regCheckY:=20
+regCheckY:=30
 regCheckX:=20
 regCheckW:=60
-Gui 4:+owner1 -MaximizeBox +MinimizeBox
+Gui 4:-MaximizeBox +MinimizeBox +owner1
+gui 4: tab, 1
+
 Loop, %runReg%
 { Gui 4: Add, Checkbox, y%regCheckY% x%regCheckX% vcheckRegProg%Counter%, % regProg%Counter%
  regCheckY+=20
  Counter++
 }
-regBoxH:=regCheckY + 5
-Gui 4: Add, GroupBox, x0 y0 w400 h%regBoxH%,Registry Startup
 
-  ;Startup folder
-stCheckYb:=stCheckYa:=regCheckY
+gui 4: Add, Tab2,x2 y2 h%regCheckY% w400,Registry|Startup|Global
+gui 4: tab,2
 Counter=0
- Loop, C:\Documents and Settings\Bry\Start Menu\Programs\Startup\*.lnk
- { FileGetShortcut, %A_LoopFileFullPath%, place,, args  
- lnk%Counter% = %place% %args% 
+ Loop, %A_Startmenu%\Programs\Startup\*.lnk
+ { FileGetShortcut, %A_LoopFileFullPath%, lnk%Counter%,, lnkArgs%counter%
   Counter++
 }
 lnkTotal:=Counter
 Counter=0
-stCheckYb+=20
+stCheckY:=30
 Loop, %lnkTotal%
-{  Gui 4: Add, Checkbox, y%stCheckYb% x%regCheckX% vcheckLnkProg%Counter%, % lnk%Counter%
-  stCheckYb+=20
+{  Gui 4: Add, Checkbox, +wrap w380 y%stCheckY% x%regCheckX% vcheckLnkProg%Counter%, % lnk%Counter%
+  stCheckY+=20
  Counter++
 }
-stBoxH:= stCheckYb - stCheckYa
-stOCY:=stBoxH + regBoxH + 7
-Gui 4: Add, GroupBox, x0 y%regCheckY% w400 h%stBoxH%,Startup Folder
+gui 4:tab, 3
+Counter=0
+ Loop, %A_StartMenuCommon%\Programs\Startup\*.lnk
+ { FileGetShortcut, %A_LoopFileFullPath%, glolnk%counter%,, gloArgs%Counter%
+  Counter++
+}
+gloLnkTotal:=Counter
+Counter=0
+globalCheckY:=30
+Loop, %gloLnkTotal%
+{  Gui 4: Add, Checkbox, +wrap w380 y%globalCheckY% x%regCheckX% vglobalLnkProg%Counter%, % gloLnk%Counter%
+  globalCheckY+=20
+ Counter++
+}
+
+if regCheckY > %stCheckY%
+ { stOCY:=regCheckY + 7
+ }
+else
+ { if stCheckY > %globalCheckY%
+    { stOCY:=stCheckY + 7
+    }
+   else
+    { stOCY:=globalCheckY + 7
+    }
+ }
+gui 4: Tab
 Gui 4: Add, Button, w%regCheckW% x70 y%stOCY% ,Import
 Gui 4: Add, Button, w%regCheckW% x140 y%stOCY% ,Export
 Gui 4: Add, Button, w%regCheckW% x210 y%stOCY% ,Cancel
@@ -226,24 +169,26 @@ Gui 4: Add, Button, w%regCheckW% x210 y%stOCY% ,Cancel
 ;Gui 5: About
 gui 5:+owner1 -MaximizeBox -MinimizeBox
 gui 5:font, s10 w700, Verdana
-gui 5:Add, text,x70,StartupSaver v0.9 beta
+gui 5:Add, text,x70,StartupSaver v0.94 beta
 gui 5:font, s7 w400, MS sans serif
-gui 5:add, text,w220 x92,% "     StartupSaver was made for fun and for use. It was written in the powerful Autohotkey, and freely available to all who can use it.`n`n`nwww.FreewareWire.blogspot.com`n�2009 Jon Petraglia"
+gui 5:add, text,w220 x92,% "     StartupSaver was made for fun and for use. It was written in the powerful Autohotkey, and freely available to all who can use it."
+Gui 5:font,CBlue Underline
+gui 5:add, text, w220 x92 gFreewareWire,% "`nwww.FreewareWire.blogspot.com"
+GUI 5:font
+gui 5:add, text, w220 x92,% "�2009 Jon Petraglia"
 gui 5:add, picture, w70 h70 icon1 x15 y25, startupsaver.exe
 
-;!!!!  Gui 6 reserved for Run !!!!
 
 ;Show Main GUI
-gui 1:show, w450 h400, StartupSaver v0.9 beta
+gui 1:show, w470, StartupSaver v0.94 beta
 return
 
 ;Menus defined
 FileRun:
-1=-start
-Gosub, Starting
+Run, StartupSaverRun.ahk
 Return
 FileIE:
-Gui 4: show,, Import/Export (beta)
+Gui 4: show,autosize, Import/Export (beta)
 Return
 FileExit:
 ExitApp
@@ -298,44 +243,12 @@ gui 5:show, w320 h130, About StartupSaver
 return
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~References~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-BtnSet0:
-setfile("0")
+pathSelect:
+FileSelectFile,izzafile,3,C:\Program Files,, Launchables (*.exe;*.jar;*.ahk)
+if izzafile=
+  return
+GuiControl 6:, pPath, %izzafile%
 return
-BtnSet1:
-setfile("1")
-return
-BtnSet2:
-setfile("2")
-return
-BtnSet3:
-setfile("3")
-return
-BtnSet4:
-setfile("4")
-return
-BtnSet5:
-setfile("5")
-return
-BtnSet6:
-setfile("6")
-return
-BtnSet7:
-setfile("7")
-return
-BtnSet8:
-setfile("8")
-return
-BtnSet9:
-setfile("9")
-return
-
-SetFile(ID)
-  { FileSelectFile,izzafile,3,C:\Program Files,, Launchables (*.exe;*.jar;*.ahk)
-    if izzafile=
-     return
-    GuiControl,, newprog%ID%, %izzafile%
-  }  
 
 InstallDirSet:
 { FileSelectFolder,izzafile,C:\Program Files,3, Select Installation Folder
@@ -344,20 +257,95 @@ InstallDirSet:
     GuiControl, 3:, installdir, %izzafile%\StartupSaver
     return
     }
-  
+
+MyListView:
+if A_GuiEvent= DoubleClick
+{ LV_GetText(rowPath, A_EventInfo,1)
+ LV_GetText(RowTime, A_EventInfo,2)
+ LV_GetText(rowArgs, A_EventInfo, 3)
+ numero:=A_EventInfo
+ Gui 6: show, ,Edit entry
+ GuiControl 6:, pPath, %rowPath%
+ GuiControl 6:, time, %rowTime%
+ GuiControl 6:, arguments, %rowArgs%
+ return
+}
+return
+
+FreewareWire:
+run, http://www.freewarewire.blogspot.com
+return
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buttons~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ButtonNew:
+Gui 6: show, ,Add Entry
+GuiControl 6:, pPath,
+GuiControl 6:, time,
+GuiControl 6:, arguments,
+numero=0
+return
+ButtonDelete:
+deleteIt:=LV_GetNext()
+LV_Delete(deleteIt)
+ifequal, deleteIt, % LV_GetCount() + 1
+ LV_Modify(deleteIT - 1, "Select")
+Else
+ LV_Modify(deleteIt, "Select")
+return
+UpandUp:
+simplemove("up")
+Return
+DownandDown:
+simplemove("down")
+return
 ButtonOk:
 Gui, Submit
 ;Writing
 Counter=0
-Loop, 10
+ID=1
+Loop,
+{
+  LV_GetText(newprog%Counter%, ID,1)
+  if newprog%Counter%=
+   { numOfProgs:=Counter
+   break
+   }
+  LV_GetText(time%Counter%, ID,2)
+  LV_GetText(arguments%Counter%, ID,3)
+  ID++
+  Counter++
+}
+Counter=0
+Loop, %numofprogs%
 { IniWrite, % newprog%Counter%, StartupSaver.ini, Programs, program%Counter%
-IniWrite, % newtime%Counter%, StartupSaver.ini, Times, time%Counter%   
+IniWrite, % time%Counter%, StartupSaver.ini, Times, time%Counter%   
+IniWrite, % arguments%Counter%, StartupSaver.ini, Args, arg%Counter%
 Counter++
+}
+Loop,50                                                                                     ;CHANGE
+{ IniDelete, StartupSaver.ini, programs, program%Counter%
+ ifequal, errorlevel, 1
+  break
+ IniDelete, StartupSaver.ini, Times, time%Counter%   
+ IniDelete, StartupSaver.ini, Args, arg%Counter%
+ Counter++
 }
 ButtonCancel:
 GuiClose:
 ExitApp
+
+6ButtonOK:
+Gui 6: submit
+Gui 1:default
+if numero=0
+ LV_Add("",pPath,time,arguments)
+else
+ LV_Modify(numero,"", pPath, time,arguments)
+6ButtonCancel:
+winclose
+return
+
 
 
 2ButtonOkay:
@@ -387,57 +375,97 @@ return
 
 4ButtonImport:
 Gui 4: submit, Nohide
+gui 1: default
 regID=0
 regCount=0
-runIt:= runReg + lnkTotal
+runIt:= runReg + lnkTotal + gloLnkTotal
+;Find amount of checks are marked
 Loop, %runIt%
  { ifnotequal, checkRegProg%regID%,
     regCount:= regCount + CheckregProg%regID%       
    ifnotequal, checkLnkProg%regID%,
     regCount:= regCount + checkLnkProg%regID%
+   ifnotequal, globalLnkProg%regID%,
+    regCount:= regCount + globalLnkProg%regID%
    regID++
 }
- IfGreater, regCount, 10
-  { Msgbox,,Too many selected, Please select only up to ten choices.
-  return
-  }
+;Tests to see if user selected none
  Ifequal, regCount, 0
   { Msgbox,,Nothing selected, Please select at least one.
    Return
   }
-MsgBox,4, Confirm Import, Are you sure? This will overwrite any settings you currently have.
-ifmsgbox, Yes
-{ Counter=0
-  regID=0
+
+Counter=0
+ 
   loop, %runIt%
-  { ifequal, checkRegProg%regID%, 1
-    { GuiControl 1:, newprog%Counter%, % regProg%regID%
-      guiControl 1:, newtime%Counter%, 0
-      Counter++
+  { ifequal, checkRegProg%Counter%, 1
+    { stringreplace, regprog%Counter%, regprog%Counter%, .exe, .exe ``   
+      stringsplit regsplit, regprog%Counter%,``  
+      regprog%Counter%:=regsplit1
+      regargs%Counter%:=regsplit2
+      LV_Add("",regProg%Counter%,"0",regargs%Counter%)     ;regprog, lnk, and glolnk      
     }
     ifequal, checkLnkProg%regID%, 1
-    { GuiControl 1:, newprog%Counter%, % lnk%regID%
-      guiControl 1:, newtime%Counter%, 0
-      Counter++
+    { LV_Add("",lnk%Counter%,"0",lnkargs)  
     }
-   regID++
-  }
-  loop
-  { if %Counter% = 9
-     break
-   GuiControl 1:, newprog%Counter%,    
-   guiControl 1:, newtime%Counter%, 0
+    ifequal, globalLnkProg%regID%, 1
+    { LV_Add("",gloLnk%Counter%,"0",gloargs)  
+    }
    Counter++
  }
 winclose
-}
 return
 4ButtonExport:
-
+Counter=0
+runIt:= runReg + lnkTotal + gloLnkTotal
+FormatTime, todate,YYYYMMDDHH24MISS,MM-dd-yy
+dateID=2
+loop,
+{ ifexist, Exported--%todate%(%dateID%).txt
+  { todate:= todate "(" DateID + 1 ").txt"
+    DateID++
+   }
+  Else
+   break
+}
+ifexist, Exported--%todate%.txt
+ todate:= todate "(2)"
+Loop, %runit%
+ { ifnotequal, regprog%Counter%,
+    FileAppend, % regProg%Counter% "`n", Exported--%todate%.txt 
+   ifnotequal, lnk%Counter%,
+    FileAppend, % lnk%Counter% "`n", Exported--%todate%.txt
+   ifnotequal, gloLnk%Counter%,
+    FileAppend, % gloLnk%Counter% "`n", Exported--%todate%.txt
+   Counter++
+}
+Msgbox,,Success,Successfully exported to TXT.
 return
 4ButtonCancel:
 winclose
 return  
+
+simplemove(direction){
+   if direction=down
+    linus=-1
+   else
+    if direction=up
+     linus=1
+    else
+     return
+   selectedCount := LV_GetCount("Selected")
+   totalCount := LV_GetCount()
+   if not selectedCount
+     Return
+   RowNumber := LV_GetNext(RowNumber)
+   if (rownumber=1 and direction=="up")
+     return
+   LV_GetText(izzapath, rownumber,1)
+   LV_GetText(izzatime, rownumber,2)
+   LV_GetText(izzaarg, rownumber,3)
+   LV_Delete(rownumber)
+   LV_Insert(rownumber - linus,"select",izzapath,izzatime,izzaarg)
+  }
 
 #include CMsgBox.ahk
   
