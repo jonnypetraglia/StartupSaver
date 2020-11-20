@@ -1,4 +1,7 @@
 ;#NoTrayIcon
+#include anchor.ahk
+Menu, Tray, nostandard
+Menu, tray, DeleteAll
 ;Reading from INI
 Configuration:
 Counter=0
@@ -19,25 +22,26 @@ ifexist, StartupSaver.ini
  IniRead, startupFolder, StartupSaver.ini, Other, startwithpc
  IniRead, stall, StartupSaver.ini, Other, stallTime
  IniRead, showProgress, StartupSaver.ini, Other, showProgress
- IniRead, soundOnError, StartupSaver.ini, Other, sound
+ IniRead, skipError, StartupSaver.ini, Other, skipError
 }
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~GUIs~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;MainGui
-Gui 1:Add, ListView, r10 w450 gMyListView -multi grid nosort, Path|Delay|Args
-Gui 1:Add, Button, y173 x10 h20 w45,New
-Gui 1:Add, Button, y173 x60 h20,Delete
+Gui 1:+resize +minsize
+Gui 1:Add, ListView, r8 w450 gMyListView -multi grid nosort checked vmylistview, |Path|Delay|Args
+Gui 1:Add, Button, y173 x10 h20 w45 vnewb,New
+Gui 1:Add, Button, y173 x60 h20 vdelb,Delete
 gui 1:Font, s6
-Gui 1:Add, Button, y173 x125 h20 w20 gupandup,/\
-Gui 1:Add, Button, y173 x150 h20 w20 gdownanddown,\/
+Gui 1:Add, Button, y173 x125 h20 w20 gupandup vupb,/\
+Gui 1:Add, Button, y173 x150 h20 w20 gdownanddown vdownb,\/
 Gui 1:Font
-Gui 1:Add, Button, y173 x275 w60 default, OK
-Gui 1:Add, Button,y173 x345 w60, Cancel
+Gui 1:Add, Button, y173 x275 w60 default vokb, OK
+Gui 1:Add, Button,y173 x345 w60 vcancelb, Cancel
 
 Gui 6:Add,groupbox,x5 y1 h110 w365,Add/Edit
 Gui 6:Add,text,x13 y20,Path:
 Gui 6:Add,Edit,x13 y35 w325 vpPath,
-Gui 6:Add,Button,x343 y34 gpathSelect, …
+Gui 6:Add,Button,x343 y34 gpathSelect, ï¿½
 Gui 6:Add,text,x13 y65, Delay:
 Gui 6:Add, Edit,w40 x13 y80 w40
 Gui 6:Add, UpDown, vtime Range0-60,
@@ -45,17 +49,27 @@ Gui 6:Add,text,x70 y65,Arguments:
 Gui 6:Add,Edit,x70 y80 w290 varguments,
 Gui 6:Add, Button, y120 x230 w60 default, OK
 Gui 6:Add, Button,y120 x300 w60, Cancel
+pathselectdir:=A_ProgramFiles
 
 Counter=0
 loop,
  { if prog%Counter%=
     break
-  LV_Add("",prog%Counter%, rawtime%Counter%, argument%Counter%)  
+  LV_Add("","",prog%Counter%, rawtime%Counter%, argument%Counter%)  
   Counter++
 }
-LV_ModifyCol(1,340)
-LV_ModifyCol(2,40)
-LV_ModifyCol(3,100)
+LV_ModifyCol(2,340)
+LV_ModifyCol(3,40)
+LV_ModifyCol(4,100)
+
+id=0
+loop,%Counter%
+{
+ iniread, checktest, StartupSaver.ini, active, check%id%
+ ifequal, checktest, 1
+  LV_Modify(id+1,"check")
+ id++
+}
 
 Menu, FileMenu, Add, &Run, FileRun
 Menu, FileMenu, Add, Import, FileImport
@@ -69,7 +83,7 @@ Menu, MenuBar, Add, &File, :FileMenu
 Menu, Menubar, Add, &Options, :OptionsMenu
 Menu, MenuBar, Add, &Help, :HelpMenu
 Gui 1:menu, Menubar
-Gui 1:Add, GroupBox, x0 y-10 h12 w470
+Gui 1:Add, GroupBox, x0 y-10 h12 w470 vgroupy
 
 ;Gui 2: Config
 Gui 2:+owner1 -MaximizeBox -MinimizeBox
@@ -78,7 +92,7 @@ Gui 2: Add, Text, x15 y30, Delay:
 Gui 2: Add, Edit, w35 y28 x52
 Gui 2: Add, UpDown, w30 vstall Range1-99, %stall%
 Gui 2: Add, Checkbox, vshowProgress x20 y55 Checked%showProgress%, Show "Starting" window
-Gui 2: Add, Checkbox, vsoundOnError x20 y75 Checked%soundOnError%, Beep on error
+Gui 2: Add, Checkbox, vskipError x20 y75 Checked%skipError%, Skip errors
 Gui 2: Add, Checkbox, vstartupFolder x20 y95 Checked%StartupFolder%, Start on start up
 Gui 2: Font, s7
 Gui 2: Add, Button, h20 w43 y114 x40 default, Okay
@@ -90,7 +104,7 @@ Gui 3:+owner1 -MaximizeBox -MinimizeBox
 Gui 3: Add, GroupBox, h100 w400 Section, Config
 Gui 3: Add, Text, x15 y30, Install Directory:
 Gui 3: Add, Edit, x100 y28 w250 vinstallDir readonly, % "C:\Program Files\StartupSaver"
-Gui 3: Add, Button, x358 y27 w18 gInstallDirSet, …
+Gui 3: Add, Button, x358 y27 w18 gInstallDirSet, ï¿½
 Gui 3: Add, Checkbox, vstartMenuEntry x20 y55 Checked0, Start Menu entry
 Gui 3: Add, Checkbox, vstartupFolder x150 y55 Checked0, Add to startup
 Gui 3: Add, Button, h20 w50 y80 x90 ginstallFinal default, Install
@@ -121,7 +135,7 @@ Counter=0
 regCheckY:=30
 regCheckX:=20
 regCheckW:=60
-Gui 4:-MaxmizeBox +MinimizeBox +owner1
+Gui 4:-MaximizeBox +MinimizeBox +owner1
 gui 4: tab,1
 
 Loop, %runReg%
@@ -195,36 +209,51 @@ Gui 4: Add, Button, w%regCheckW% x210 y%stOCY% ,Cancel
 
 
 ;Gui 5: About
-gui 5:+owner1 -MaxmizeBox -MinimizeBox +close
+gui 5:+owner1 -MaximizeBox -MinimizeBox
 gui 5:font, s10 w700, Verdana
-gui 5:Add, text,x70,StartupSaver v0.95 beta
+gui 5:Add, text,x70,StartupSaver v0.97 beta
 gui 5:font, s7 w400, MS sans serif
 gui 5:add, text,w220 x92,% "     StartupSaver was made for fun and for use. It was written in the powerful Autohotkey, and freely available to all who can use it."
 Gui 5:font,CBlue Underline
-gui 5:add, text, w220 x92 gFreewareWire underline,% "`nwww.FreewareWire.blogspot.com"
+gui 5:add, text, w220 x92 gFreewareWire,% "`nwww.FreewareWire.blogspot.com"
 GUI 5:font
-gui 5:add, text, w220 x92,% "©2009 Jon Petraglia"
+gui 5:add, text, w220 x92,% "ï¿½2009 Jon Petraglia"
 gui 5:add, picture, w70 h70 icon1 x15 y25, startupsaver.exe
 
 
 ;Gui 7: Export
-gui 7:+owner1 -MaxmizeBox -MinimizeBox +close
+gui 7:+owner1 -MaximizeBox -MinimizeBox
 Gui 7: Add, groupbox,h125 w150 y5 x5,Options
-Gui 7: Add, checkbox, vexpReg x20 y25,Export Registry
-Gui 7: Add, checkbox, vexpGloreg x20 y45,Export Global Registry
-Gui 7: Add, checkbox, vexpSt x20 y65,Export Startup Folder
-Gui 7: Add, checkbox, vexpGlost x20 y85,Export Global Startup
-Gui 7: Add, checkbox, vexpSS x20 y105,Export StartupSaver
+Gui 7: Add, checkbox, vexpReg x20 y25 ggrey,Export Registry
+Gui 7: Add, checkbox, vexpGloreg x20 y45 ggrey,Export Global Registry
+Gui 7: Add, checkbox, vexpSt x20 y65 ggrey,Export Startup Folder
+Gui 7: Add, checkbox, vexpGlost x20 y85 ggrey,Export Global Startup
+Gui 7: Add, checkbox, vexpSS x20 y105 ggrey,Export StartupSaver
 Gui 7: Add, groupbox, y5 x160 h80 w75,Export type
 Gui 7: Add, Radio, vradioTxt x170 y25,.TXT
 Guicontrol 7:,radiotxt,1
 Gui 7: Add, Radio, vradioReg x170 y45,.REG
 Gui 7: Add, Radio, vradioLnk x170 y65,.LNK
-Gui 7: Add, Button, x160 y88 w70 h20 default, Export
+Gui 7: Add, Button, x160 y88 w70 h20 default vexportB, Export
 GUI 7: Add, Button, x160 y110 w70 h20, Cancel
 
+gosub, grey
+
 ;Show Main GUI
-gui 1:show, w470, StartupSaver v0.95 beta
+gui 1:show, w470, StartupSaver v0.97 beta
+return
+
+Guisize:
+anchor("groupy","w")
+anchor("mylistview","wh")
+anchor("newb","y")
+anchor("delb","y")
+anchor("upb","y")
+anchor("downb","y")
+anchor("Okb","xy")
+anchor("cancelb","xy")
+Guicontrol 1:+redraw, cancelb
+LV_ModifyCol(4,"autohdr")
 return
 
 ;Menus defined
@@ -310,14 +339,24 @@ return
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~References~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 pathSelect:
-FileSelectFile,izzafile,3,C:\Program Files,, Launchables (*.exe;*.jar;*.ahk)
+gui 6: +owndialogs
+FileSelectFile,izzafile,3,%pathselectdir%,Select a program to add, Launchables (*.exe;*.jar;*.ahk)
 if izzafile=
   return
+splitpath, izzafile,,pathselectdir
 GuiControl 6:, pPath, %izzafile%
 return
 
+grey:
+gui 7:submit, nohide
+if(expreg=1 or expgloreg=1 or expst=1 or expglost=1 or expSS=1)
+ Guicontrol 7: enabled,exportB,
+Else
+ Guicontrol 7:disabled,exportB,
+return
+
 InstallDirSet:
-{ FileSelectFolder,izzafile,C:\Program Files,3, Select Installation Folder
+{ FileSelectFolder,izzafile,%A_ProgramFiles%,3, Select Installation Folder
     if izzafile=
      return
     GuiControl, 3:, installdir, %izzafile%\StartupSaver
@@ -326,9 +365,9 @@ InstallDirSet:
 
 MyListView:
 if A_GuiEvent= DoubleClick
-{ LV_GetText(rowPath, A_EventInfo,1)
- LV_GetText(RowTime, A_EventInfo,2)
- LV_GetText(rowArgs, A_EventInfo, 3)
+{ LV_GetText(rowPath, A_EventInfo,2)
+ LV_GetText(RowTime, A_EventInfo,3)
+ LV_GetText(rowArgs, A_EventInfo, 4)
  numero:=A_EventInfo
  Gui 6: show, ,Edit entry
  GuiControl 6:, pPath, %rowPath%
@@ -372,15 +411,31 @@ Counter=0
 ID=1
 Loop,
 {
-  LV_GetText(newprog%Counter%, ID,1)
+  LV_GetText(newprog%Counter%, ID,2)
   if newprog%Counter%=
    { numOfProgs:=Counter
    break
    }
-  LV_GetText(time%Counter%, ID,2)
-  LV_GetText(arguments%Counter%, ID,3)
+  LV_GetText(time%Counter%, ID,3)
+  LV_GetText(arguments%Counter%, ID,4)
   ID++
   Counter++
+}
+rownumber=1
+Loop,% LV_GetCount()
+{
+  checkrow := LV_GetNext(rownumber-1,"Checked")
+  ifequal, checkrow, %rownumber%
+  {   rownumber--
+   iniwrite, 1, StartupSaver.ini, active, check%rownumber% 
+   rownumber++
+   }
+  else
+  { rownumber--
+   iniwrite, 0, StartupSaver.ini, active, check%rownumber%
+   rownumber++
+   }
+  rownumber++
 }
 Counter=0
 Loop, %numofprogs%
@@ -396,6 +451,7 @@ Loop,
  IniDelete, StartupSaver.ini, programs, program%Counter%
  IniDelete, StartupSaver.ini, Times, time%Counter%   
  IniDelete, StartupSaver.ini, Args, arg%Counter%
+ Inidelete, StartupSaver.ini, active, check%Counter%
  Counter++
 }
 ButtonCancel:
@@ -406,9 +462,9 @@ ExitApp
 Gui 6: submit
 Gui 1:default
 if numero=0
- LV_Add("",pPath,time,arguments)
+ LV_Add("","",pPath,time,arguments)
 else
- LV_Modify(numero,"", pPath, time,arguments)
+ LV_Modify(numero,"","", pPath, time,arguments)
 6ButtonCancel:
 winclose
 return
@@ -430,7 +486,7 @@ if startupFolder, 0
   FileDelete, %A_StartMenu%\Programs\Startup\StartupSaver.lnk 
 }
 IniWrite, %showProgress%, StartupSaver.ini, Other, showProgress
-IniWrite, %soundOnError%, StartupSaver.ini, Other, sound
+IniWrite, %skipError%, StartupSaver.ini, Other, skipError
 IniWrite, %startupFolder%, StartupSaver.ini, Other, startwithpc
 2ButtonCancel:
 WinClose
@@ -472,20 +528,20 @@ Counter=0
       stringsplit regsplit, regprog%Counter%,``  
       regprog%Counter%:=regsplit1
       regargs%Counter%:=regsplit2
-      LV_Add("",regProg%Counter%,"0",regargs%Counter%)     ;regprog, lnk, and glolnk   & gloreg   
+      LV_Add("","",regProg%Counter%,"0",regargs%Counter%)     ;regprog, lnk, and glolnk   & gloreg   
     }
     ifequal, checkgloreg%Counter%, 1
     { stringreplace, gloreg%Counter%, gloreg%Counter%, .exe, .exe ``   
       stringsplit regsplit, gloreg%Counter%,``  
       gloreg%Counter%:=regsplit1
       gloregargs%Counter%:=regsplit2
-      LV_Add("",gloreg%Counter%,"0",gloregargs%Counter%)     ;regprog, lnk, and glolnk      
+      LV_Add("","",gloreg%Counter%,"0",gloregargs%Counter%)     ;regprog, lnk, and glolnk      
     }
     ifequal, checkLnkProg%Counter%, 1
-    { LV_Add("",lnk%Counter%,"0",lnkargs)  
+    { LV_Add("","",lnk%Counter%,"0",lnkargs)  
     }
     ifequal, globalLnkProg%Counter%, 1
-    { LV_Add("",gloLnk%Counter%,"0",gloargs)  
+    { LV_Add("","",gloLnk%Counter%,"0",gloargs)  
     }
    Counter++
  }
@@ -496,32 +552,41 @@ winclose
 return  
 
 7ButtonExport:
-gui 7: submit
-runIt:= runReg + lnkTotal + gloLnkTotal
-/* ------Eventually, a way to keep track of exported files.
-FormatTime, todate,YYYYMMDDHH24MISS,MM-dd-yy
-dateID=2
-loop,
-{ ifexist, Exported--%todate%(%dateID%).%expType%
-  { todate:= todate "(" DateID + 1 ")." expType 
-    DateID++
-   }
-  Else
-   break
+gui 7: submit, nohide
+ifequal, radiolnk, 1
+{
+ fileselectFolder, exportfolder,,3, Select a target folder
+ ifequal, exportfolder,
+  return
 }
-ifexist, Exported--%todate%.txt
- todate:= todate "(2)"
- */
+else
+{
+ifequal, radioreg, 1
+ { filetype=Registry (*.reg)
+ ftypeappend=.Reg
+ }
+else ifequal, radiotxt, 1
+ { filetype=Text document (*.txt)
+ ftypeappend=.txt
+ }
+fileselectfile, exportfile,24 S, %A_WorkingDir%,Choose File location and name, %filetype%
+ifequal, exportfile,
+ return
+ exportfile=%exportfile%%ftypeappend%
+}
+Export:
+gui 7: hide
+runIt:= runReg + lnkTotal + gloLnkTotal
 Counter=0
 apos=`"
 ifequal, radioReg, 1
- { FileAppend, Windows Registry Editor Version 5.00`n`n, Exported.reg
-   FileAppend, [HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run]`n,Exported.reg
+ { FileAppend, Windows Registry Editor Version 5.00`n`n, %exportFile%
+   FileAppend, [HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run]`n,%exportFile%
    ifequal, expReg,1   
     {Counter=0
      Loop, %runReg%
       { splitpath, regprog%Counter%,,,,nam
-      FileAppend, % apos nam apos "=" apos regProg%Counter% apos "`n", Exported.reg 
+      FileAppend, % apos nam apos "=" apos regProg%Counter% apos "`n", %exportFile%
       Counter++
       }
    }
@@ -529,7 +594,7 @@ ifequal, radioReg, 1
     {Counter=0
      Loop, %gloregtot%
       { splitpath, gloreg%Counter%,,,,nam
-      FileAppend, % apos nam apos "=" apos gloReg%Counter% apos "`n", Exported.reg 
+      FileAppend, % apos nam apos "=" apos gloReg%Counter% apos "`n", %exportFile%
       Counter++
       }
     } 
@@ -537,7 +602,7 @@ ifequal, radioReg, 1
     { Counter=0
      Loop, %lnkTotal%
       { splitpath, lnk%Counter%,,,,nam
-      FileAppend, % apos nam apos "=" apos lnk%Counter% apos "`n", Exported.reg  
+      FileAppend, % apos nam apos "=" apos lnk%Counter% apos "`n", %exportFile%
       Counter++
       }
      }
@@ -545,7 +610,7 @@ ifequal, radioReg, 1
      { Counter=0
       Loop, %gloLnkTotal% 
       { splitpath, glolnk%Counter%,,,,nam
-      FileAppend, % apos nam apos "=" apos glolnk%Counter% apos "`n", Exported.reg    
+      FileAppend, % apos nam apos "=" apos glolnk%Counter% apos "`n", %exportFile% 
       Counter++
       }
     }
@@ -554,36 +619,36 @@ ifequal, radioReg, 1
        Counter=0   
        ID=1
        Loop,
-       { LV_GetText(newprog%Counter%, ID,1)
+       { LV_GetText(newprog%Counter%, ID,2)
          if newprog%Counter%=
          { numOfProgs:=Counter
            break
          }
-        LV_GetText(arguments%Counter%, ID,3)
+        LV_GetText(arguments%Counter%, ID,4)
         ID++
         Counter++
        }
        Counter=0
        Loop, %numofprogs%
        { splitpath, newprog%Counter%,,,,nam
-         FileAppend, % apos nam apos "=" apos newprog%Counter%, Exported.reg    
+         FileAppend, % apos nam apos "=" apos newprog%Counter%, %exportFile% 
          ifnotequal, arguments%Counter%,
-          FileAppend, % " " arguments%Counter% apos "`n", Exported.Reg
+          FileAppend, % " " arguments%Counter% apos "`n", %exportFile%
          Else
-          FileAppend, %apos% `n, Exported.Reg
+          FileAppend, %apos% `n, %exportFile%
          Counter++
        }
     }
   return
 }
 ifequal, radiolnk,1
- { ifnotexist, %A_WorkingDir%\Export\
-    filecreatedir, %A_WorkingDir%\Export\
+ { ifnotexist, %exportFolder%
+    filecreatedir, %exportFolder%
    ifequal, expReg,1       
     { Counter=0
      Loop, %runReg%
       { splitpath, regprog%Counter%,,dir,,nam
-      Filecreateshortcut, % apos regProg%Counter% apos,%A_WorkingDir%\Export\%nam%.lnk, % apos dir apos ; % regargs%Counter%  
+      Filecreateshortcut, % apos regProg%Counter% apos,%exportFolder%\%nam%.lnk, % apos dir apos ; % regargs%Counter%  
       Counter++
       }
     }
@@ -591,7 +656,7 @@ ifequal, radiolnk,1
     { Counter=0
      Loop, %gloregtot%
       { splitpath, gloreg%Counter%,,dir,,nam
-      Filecreateshortcut, % apos gloreg%Counter% apos,%A_WorkingDir%\Export\%nam%.lnk, % apos dir apos 
+      Filecreateshortcut, % apos gloreg%Counter% apos,%exportFolder%\%nam%.lnk, % apos dir apos 
       Counter++
       }
     }
@@ -599,7 +664,7 @@ ifequal, radiolnk,1
     { Counter=0
      Loop, %lnkTotal%
       { splitpath, lnk%Counter%,,dir,,nam
-      Filecreateshortcut, % apos lnk%Counter% apos,%A_WorkingDir%\Export\%nam%.lnk, % apos dir apos, % lnkargs%Counter% 
+      Filecreateshortcut, % apos lnk%Counter% apos,%exportFolder%\%nam%.lnk, % apos dir apos, % lnkargs%Counter% 
       Counter++
       }
      }
@@ -607,7 +672,7 @@ ifequal, radiolnk,1
     { Counter=0
       Loop, %gloLnkTotal% 
       { splitpath, glolnk%Counter%,,dir,,nam
-      Filecreateshortcut, % apos glolnk%Counter% apos, %A_WorkingDir%\Export\%nam%.lnk,% apos dir apos, % gloargs%Counter%   
+      Filecreateshortcut, % apos glolnk%Counter% apos, %exportfolder%\%nam%.lnk,% apos dir apos, % gloargs%Counter%   
       Counter++
       }
     }
@@ -616,12 +681,12 @@ ifequal, radiolnk,1
        Counter=0   
        ID=1
        Loop,
-       { LV_GetText(newprog%Counter%, ID,1)
+       { LV_GetText(newprog%Counter%, ID,2)
          if newprog%Counter%=
          { numOfProgs:=Counter
            break
          }
-        LV_GetText(arguments%Counter%, ID,3)
+        LV_GetText(arguments%Counter%, ID,4)
         ID++
         Counter++
        }
@@ -632,7 +697,7 @@ ifequal, radiolnk,1
           }
        Loop, %numofprogs%
        { splitpath, newprog%Counter%,,dir,,nam
-         Filecreateshortcut, % apos newprog%Counter% apos, %A_Workingdir%\Export\%nam%.lnk, % dir , % arguments%Counter%   
+         Filecreateshortcut, % apos newprog%Counter% apos, %exportFolder%\%nam%.lnk, % dir , % arguments%Counter%   
          Counter++
        }
      }
@@ -643,28 +708,28 @@ ifequal, radioTxt,1
  { ifequal, expReg,1   
     {Counter=0
      Loop, %runReg%
-      { FileAppend, % regProg%Counter% "`n", Exported.txt
+      { FileAppend, % regProg%Counter% "`n", %exportFile%
       Counter++
       }
     }
   ifequal, expgloReg,1   
     {Counter=0
      Loop, %gloregtot%
-      { FileAppend, % gloreg%Counter% "`n", Exported.txt
+      { FileAppend, % gloreg%Counter% "`n", %exportFile%
       Counter++
       }
     }
     ifequal, expSt,1
     { Counter=0
      Loop, %lnkTotal%
-      { FileAppend, % lnk%Counter% "`n", Exported.txt
+      { FileAppend, % lnk%Counter% "`n", %exportFile%
       Counter++
       }
      }
    ifequal, expGlost,1
      { Counter=0
       Loop, %gloLnkTotal% 
-      { FileAppend, % glolnk%Counter% "`n", Exported.txt
+      { FileAppend, % glolnk%Counter% "`n", %exportFile%
       Counter++
       }
     }
@@ -673,22 +738,22 @@ ifequal, radioTxt,1
        Counter=0   
        ID=1
        Loop,
-       { LV_GetText(newprog%Counter%, ID,1)
+       { LV_GetText(newprog%Counter%, ID,2)
          if newprog%Counter%=
          { numOfProgs:=Counter
            break
          }
-        LV_GetText(arguments%Counter%, ID,3)
+        LV_GetText(arguments%Counter%, ID,4)
         ID++
         Counter++
        }
        Counter=0
        Loop, %numofprogs%
-       { FileAppend, % newprog%Counter%, Exported.txt
+       { FileAppend, % newprog%Counter%, %exportFile%
          ifnotequal, arguments%Counter%,
-          FileAppend, % " " arguments%Counter% "`n", Exported.txt
+          FileAppend, % " " arguments%Counter% "`n", %exportFile%
          Else
-          FileAppend, `n, Exported.txt
+          FileAppend, `n, %exportFile%
          Counter++
        }
     }
@@ -714,13 +779,20 @@ simplemove(direction){
    RowNumber := LV_GetNext(RowNumber)
    if (rownumber=1 and direction=="up")
      return
-   LV_GetText(izzapath, rownumber,1)
-   LV_GetText(izzatime, rownumber,2)
-   LV_GetText(izzaarg, rownumber,3)
+   if (rownumber=LV_GetCount() and direction="down")
+     return
+   ifequal, selectedcount,% LV_GetNext(selectedcount-1,"Checked")
+    checkit:= rownumber - linus
+   Else
+    checkit=0
+   LV_GetText(izzapath, rownumber,2)
+   LV_GetText(izzatime, rownumber,3)
+   LV_GetText(izzaarg, rownumber,4)
    LV_Delete(rownumber)
-   LV_Insert(rownumber - linus,"select",izzapath,izzatime,izzaarg)
+   LV_Insert(rownumber - linus,"select","",izzapath,izzatime,izzaarg)
+   if(checkit>0)
+    LV_modify(checkit,"Check")
   }
 
-#include CMsgBox.ahk
 
 ;^+r:: reload

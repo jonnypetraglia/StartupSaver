@@ -1,12 +1,14 @@
 ;#notrayIcon
+Menu, Tray, nostandard
+Menu, tray, DeleteAll
 
 ifnotexist, StartupSaver.ini
-  { openConfig:=CMsgBox("","File Not Found - StartupSaver.ini", "Cannot find INI file. Open Configuration?","!","Yes|No","")
-   ifequal, openConfig, Yes
+  { msgbox,20,File Not Found - StartupSaver.ini,Cannot find INI file. Open Configuration?   
+   ifmsgbox, Yes
     ifexist StartupSaverConfig.exe
       Run, StartupSaverconfig.exe
     Else
-      msgbox,,File does not exist,StartupSaverConfig.exe does not exist.
+      msgbox,16,File does not exist,StartupSaverConfig.exe does not exist.  ;20
    ExitApp
   }  
 Sysget, resw, 16
@@ -17,11 +19,8 @@ Coordmode, ToolTip, Screen
 Counter=0
 IniRead, stall, StartupSaver.ini, Other, stallTime
 IniREad, showProgress, StartupSaver.ini, Other, showProgress
-IniRead, noise, StartupSaver.ini, Other, sound
-IfEqual noise, 0
- noise=-Sound
-IfEqual noise, 1
- noise=+Sound
+IniRead, skipError, StartupSaver.ini, Other, skiperror
+errorMsg=The following programs could not be launched:`n
 bar :=% Round(100 / stall)
 Loop
  {
@@ -33,6 +32,7 @@ Loop
  IniRead, rawtime%Counter%, StartupSaver.ini, Times, time%Counter%
  time%Counter%:=% rawtime%Counter% * 1000
  Iniread, arguments%Counter%, StartupSaver.ini, Args, arg%Counter%
+ iniread, check%Counter%, StartupSaver.ini, active, check%Counter%
  Counter++ 
 }
 numofprogs:=Counter
@@ -62,20 +62,29 @@ Gui, destroy
 ;Running
 Counter=0
 Loop, %numofprogs%
-{ ifexist % prog%Counter%
+{ ifequal, check%counter%, 1
+ { ifexist % prog%Counter% 
   { SplitPath, prog%Counter%, name
    tooltip
    tooltip, Launching %name%, %resw%, %resh%
-   sleep, % time%Counter%  
-    run, % prog%Counter% arg%Counter%
+   sleep, % time%Counter%
+   splitpath, prog%Counter%,,workingDir
+    run, % prog%Counter% arg%Counter%, %workingDir%
   }
    Else
-   { CMsgBox("","File Not Found - StartupSaver", "The file:`n" prog%Counter% "`ndoes not seem to exist.","!","Okay", noise " +Timeout=5")
+   { ifnotequal, skiperror, 1
+      msgbox,20,File Not Found - StartupSaver,The file:`n prog%Counter% `ndoes not seem to exist.
+     Else
+      errorMsg:=errorMsg . "`n" . prog%Counter%
    }
+ }
  Counter++
 }
+ifequal, skiperror, 1
+{ ifnotequal, errorMsg, The following programs could not be launched:`n
+   msgbox,16,Files were not able to be opened, %errorMsg% 
+}
+ 
 GuiClose:
 ButtonCancel:
  ExitApp
- 
- #include CMsgBox.ahk

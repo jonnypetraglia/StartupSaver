@@ -1,5 +1,5 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-~~~~~~~~~StartupSaver v0.95~~~~~~~~~
+~~~~~~~~~StartupSaver v0.97~~~~~~~~~
 ~~~~~~~(C) Jon Petraglia 2009~~~~~~~
 ~~~~~FreewareWire.blogspot.com~~~~~~
 ~~~~~~amadmadhatter@gmail.com~~~~~~~
@@ -23,7 +23,7 @@ Contents:
 
 1.----------Config---------------
 
-Delay: the amount of time before StartupSaver launches the first program.
+Delay: the amount of time (in seconds) before StartupSaver launches the first program.
 
 Show "Starting" window: shows window when StartupSaver.exe is run.
 
@@ -61,6 +61,8 @@ TXT just exports them to a text file, available for viewing.
 
 You don't *have* to have StartupSaverConfig. My main reason for keeping the programs separate is that if you wanted, you could manually edit the INI and just have StartupSaver.exe. In terms of editing the INI, if something isn't a variable number (such as delay time), then 1 = enabled and 0 = disabled (like for "showProgress", 1 shows the "Starting in..." window, 0 disables it.)
 
+With v0.96, checked items run, unchecked items are skipped.
+
 7.----------Future plans---------------
 
 -In Coding:
@@ -75,9 +77,20 @@ You don't *have* to have StartupSaverConfig. My main reason for keeping the prog
 
 -Uninstall is untested. May not delete everything.
 -Export is unreliable/mostly untested.
+-Very long paths look ugly in the import screen
 
 9.----------Changelog---------------
 
+v0.97
+-Added ability to resize main window
+v0.965
+-Removed CMsgBox from program (with "Beep on error")
+-Added Working Directories
+v0.96
+-Added checkmarks (thanks, lanux128!)
+-Greys "Export" when nothing is selected on export screen
+-Made selecting path remember last place.
+-Made export a browse prompt
 v0.95
 -Added message to switch to installed version.
 -Added Exporting to REG, LNK, and TXT. But beta.
